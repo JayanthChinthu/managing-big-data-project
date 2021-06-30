@@ -1,0 +1,291 @@
+1 # PYTHON SPARK CODE #
+2
+3 #Importing libraries
+4 from pyspark import SparkContext
+5 from pyspark.sql import SparkSession
+6 import pyspark.sql.functions as f
+7
+8 spark = SparkSession.builder.getOrCreate()
+9 sc = SparkContext.getOrCreate()
+10 sc.setLogLevel("ERROR")
+11
+12 #Loading main dataset and the 2 additional datasets
+13 #2000.csv to 2008.csv are available in /user/s2289741/projectdata
+14 #carriers.csv and airports.csv available in respective folders in /user/s2331942
+15 df = spark.read.format("csv").option("header","true")
+16 .load("/user/s2289741/projectdata/*.csv")
+17 df_airports = spark.read.format("csv").option("header","true")
+18 .load("/user/s2331942/airport/airports.csv")
+19 dfairport_a = df_airports.select("iata","city")
+20 df_carriers = spark.read.format("csv").option("header","true")
+21 .load("/user/s2331942/carrier/carriers.csv")
+22 #total_records = df.count()
+23
+24 #To determine which year's dataset have cancellation code
+25 checkYears = df.filter((df.CancellationCode.isNotNull()) & (df.CancellationCode !="NA"))
+26 get = checkYears.select(checkYears.Year)
+27 get.dropDuplicates().show()
+28 '''
+29 +----+
+30 |Year|
+31 +----+
+32 |2005|
+33 |2006|
+34 |2004|
+35 |2008|
+36 |2007|
+37 |2003|
+38 +----+
+39 '''
+40
+41 # To determine from which month the cancellation code is filled
+42 # Because 2003 has lesser cancellation compared to other years.
+43 checkMonths = df.filter((df.CancellationCode.isNotNull())
+44 &(df.CancellationCode !="NA") & (df.Year == 2003))
+45 getm = checkMonths.select(checkMonths.Year, checkMonths.Month)
+46 getm.dropDuplicates().show()
+47 '''
+48 +----+-----+
+49 |Year|Month|
+50 +----+-----+
+51 |2003| 9|
+52 |2003| 6|
+53 |2003| 10|
+54 |2003| 8|
+55 |2003| 12|
+56 |2003| 7|
+57 |2003| 11|
+58 +----+-----+
+59 '''
+60
+61 #Splitting the dataset year wise
+62 df2003 = df[(df.Year == 2003) & (df.Month != 1) & (df.Month != 2)
+63 & (df.Month != 3) & (df.Month != 4) & (df.Month != 5)]
+64 #records_2003 = df2003.count()
+65 #print(records_2003)
+66 df2004 = df[(df.Year == 2004)]
+67 #records_2004 = df2004.count()
+68 #print(records_2004)
+69 df2005 = df[(df.Year == 2005)]
+70 #records_2005 = df2005.count()
+71 #print(records_2005)
+72 df2006 = df[(df.Year == 2006)]
+73 #records_2006 = df2006.count()
+74 #print(records_2006)
+75 df2007 = df[(df.Year == 2007)]
+76 #records_2007 = df2007.count()
+77 #print(records_2007)
+78 df2008 = df[(df.Year == 2008)]
+79 #records_2008 = df2008.count()
+80 #print(records_2008)
+81
+82 #Splitting the dataset which contains cancelled flights
+83 df2003a = df2003[(df2003.Cancelled == 1)]
+84 cancel_2003 = df2003a.count()
+85 #print(cancel_2003)
+86 df2004a = df2004[(df2004.Cancelled == 1)]
+87 cancel_2004 = df2004a.count()
+88 #print(cancel_2004)
+89 df2005a = df2005[(df2005.Cancelled == 1)]
+90 cancel_2005 = df2005a.count()
+91 #print(cancel_2005)
+92 df2006a = df2006[(df2006.Cancelled == 1)]
+93 cancel_2006 = df2006a.count()
+94 #print(cancel_2006)
+95 df2007a = df2007[(df2007.Cancelled == 1)]
+96 cancel_2007 = df2007a.count()
+97 #print(cancel_2007)
+98 df2008a = df2008[(df2008.Cancelled == 1)]
+99 cancel_2008 = df2008a.count()
+100 #print(cancel_2008)
+101
+102 #Splitting the dataset which contains cancelled flights due to weather
+103 df2003b = df2003a[(df2003a.CancellationCode == "B")]
+104 weather_2003 = df2003b.count()
+105 #print(weather_2003)
+106 df2004b = df2004a[(df2004a.CancellationCode == "B")]
+107 weather_2004 = df2004b.count()
+108 #print(weather_2004)
+109 df2005b = df2005a[(df2005a.CancellationCode == "B")]
+110 weather_2005 = df2005b.count()
+111 #print(weather_2005)
+112 df2006b = df2006a[(df2006a.CancellationCode == "B")]
+113 weather_2006 = df2006b.count()
+114 #print(weather_2006)
+115 df2007b = df2007a[(df2007a.CancellationCode == "B")]
+116 weather_2007 = df2007b.count()
+117 #print(weather_2007)
+118 df2008b = df2008a[(df2008a.CancellationCode == "B")]
+119 weather_2008 = df2008b.count()
+120 #print(weather_2008)
+121
+122 #Cancelled due to weather : year wise %
+123
+124 weather_perc_2003 = (float(weather_2003)/float(cancel_2003))*100
+125 print "\nCancellation rate\n2003=",weather_perc_2003
+126 weather_perc_2004 = (float(weather_2004)/float(cancel_2004))*100
+127 print "\n2004=",weather_perc_2004
+128 weather_perc_2005 = (float(weather_2005)/float(cancel_2005))*100
+129 print "\n2005=",weather_perc_2005
+130 weather_perc_2006 = (float(weather_2006)/float(cancel_2006))*100
+131 print "\n2006=",weather_perc_2006
+132 weather_perc_2007 = (float(weather_2007)/float(cancel_2007))*100
+133 print "\n2007=",weather_perc_2007
+134 weather_perc_2008 = (float(weather_2008)/float(cancel_2008))*100
+135 print "\n2008=",weather_perc_2008
+136
+137 #Month wise analysis : each year
+138 print "\nMonth Wise Analysis\n2003\n"
+139 df2003c = df2003b.select(df2003b.Month)
+140 r2003 = df2003c.rdd
+141 r2003a = r2003 \
+142 .flatMap(lambda x:x) \
+143 .map(lambda x:(x,1)) \
+144 .reduceByKey(lambda a,b:a+b)
+145 month_2003 = r2003a.top(12, key=lambda t: t[1])
+146 for (m, c) in month_2003:
+147 print "Month:\t", m, "\t Count:\t", c
+148
+149 print "\n2004\n"
+150 df2004c = df2004b.select(df2004b.Month)
+151 r2004 = df2004c.rdd
+152 r2004a = r2004 \
+153 .flatMap(lambda x:x) \
+154 .map(lambda x:(x,1)) \
+155 .reduceByKey(lambda a,b:a+b)
+156 month_2004 = r2004a.top(12, key=lambda t: t[1])
+157 for (m, c) in month_2004:
+158 print "Month:\t", m, "\t Count:\t", c
+159
+160 print "\n2005\n"
+161 df2005c = df2005b.select(df2005b.Month)
+162 r2005 = df2005c.rdd
+163 r2005a = r2005 \
+164 .flatMap(lambda x:x) \
+165 .map(lambda x:(x,1)) \
+166 .reduceByKey(lambda a,b:a+b)
+167 month_2005 = r2005a.top(12, key=lambda t: t[1])
+168 for (m, c) in month_2005:
+169 print "Month:\t", m, "\t Count:\t", c
+170
+171 print "\n2006\n"
+172 df2006c = df2006b.select(df2006b.Month)
+173 r2006 = df2006c.rdd
+174 r2006a = r2006 \
+175 .flatMap(lambda x:x) \
+176 .map(lambda x:(x,1)) \
+177 .reduceByKey(lambda a,b:a+b)
+178 month_2006 = r2006a.top(12, key=lambda t: t[1])
+179 for (m, c) in month_2006:
+180 print "Month:\t", m, "\t Count:\t", c
+181
+182 print "\n2007\n"
+183 df2007c = df2007b.select(df2007b.Month)
+184 r2007 = df2007c.rdd
+185 r2007a = r2007 \
+186 .flatMap(lambda x:x) \
+187 .map(lambda x:(x,1)) \
+188 .reduceByKey(lambda a,b:a+b)
+189 month_2007 = r2007a.top(12, key=lambda t: t[1])
+190 for (m, c) in month_2007:
+191 print "Month:\t", m, "\t Count:\t", c
+192
+193 print "\n2008\n"
+194 df2008c = df2008b.select(df2008b.Month)
+195 r2008 = df2008c.rdd
+196 r2008a = r2008 \
+197 .flatMap(lambda x:x) \
+198 .map(lambda x:(x,1)) \
+199 .reduceByKey(lambda a,b:a+b)
+200 month_2008 = r2008a.top(12, key=lambda t: t[1])
+201 for (m, c) in month_2008:
+202 print "Month:\t", m, "\t Count:\t", c
+203
+204 #Dataset containing overall flights cancelled due to weather
+205 dfowc = df[((df.Year==2008) | (df.Year==2007) | (df.Year==2006)
+206 | (df.Year==2005) | (df.Year==2004) | ((df.Year == 2003)
+207 &(df.Month != 1)&(df.Month != 2)&(df.Month != 3)
+208 &(df.Month != 4)&(df.Month != 5))) & (df.Cancelled == 1)]
+209 dfwc = df[(df.Cancelled == 1) & (df.CancellationCode == "B")]
+210 flights_cancelled = dfowc.count()
+211 #print(flights_cancelled)
+212 flights_cancelled_weather = dfwc.count()
+213 #print(flights_cancelled_weather)
+214
+215 #Month wise analysis: Overall
+216 print "\nOverall\n"
+217 dfmonth = dfwc.select(df.Month)
+218 rall = dfmonth.rdd
+219 ralla = rall \
+220 .flatMap(lambda x:x) \
+221 .map(lambda x:(x,1)) \
+222 .reduceByKey(lambda a,b:a+b)
+223 month_all = ralla.top(12, key=lambda t: t[1])
+224 for (m, c) in month_all:
+225 print "Month:\t", m, "\t Count:\t", c
+226
+227 #Function for route wise analysis
+228 def routes(dataframe):
+229 dfR = dataframe.select(dataframe.Origin,dataframe.Dest)
+230 dfRa = dfR.groupby(['Origin','Dest']).agg(f.count("*").alias('count'))
+231 dfR_final_desc = dfRa.orderBy('count',ascending=False)
+232 dfRb = dfR_final_desc.join(dfairport_a, dfR_final_desc.Origin == dfairport_a.iata)
+233 .drop('iata').withColumnRenamed("city","Origin City")
+234 dfRc = dfRb.join(dfairport_a, dfRb.Dest == dfairport_a.iata).drop('iata')
+235 .withColumnRenamed("city","Destination city")
+236 dfR_final_asc = dfRa.orderBy('count',ascending=True)
+237 #dfR_final_asc.show(50)
+238 #Since all the years have 1 as least affected route
+239 dfR_final_asc.filter(f.col("count") == "1").count()
+240 dfRc.show(5)
+241
+242 #Calling route wise analysis function : year wise
+243 print "\nRoute Wise Analysis\n\n2003-Most affected(5) and least affected count\n"
+244 routes(df2003b)
+245 print "\n2004-Most affected(5) and least affected count\n"
+246 routes(df2004b)
+247 print "\n2005-Most affected(5) and least affected count\n"
+248 routes(df2005b)
+249 print "\n2006-Most affected(5) and least affected count\n"
+250 routes(df2006b)
+251 print "\n2007-Most affected(5) and least affected count\n"
+252 routes(df2007b)
+253 print "\n2008-Most affected(5) and least affected count\n"
+254 routes(df2008b)
+255 #Calling route wise analysis function : Overall
+256 print "\nOverall-Most affected(5) and least affected count\n"
+257 routes(dfwc)
+258
+259 #Function for airline wise analysis
+260 def airlines(dataframe1, dataframe2):
+261 dfAirway = dataframe1.select(dataframe1.UniqueCarrier)
+262 dfAirwaya = dfAirway.groupby(['UniqueCarrier']).agg(f.count("*").alias('Wcount'))
+263 #dfAirway_final_asc = dfAirwaya.orderBy('count',ascending=True)
+264 dfA = dataframe2.groupby(['UniqueCarrier']).agg(f.count("*").alias('Cancel_count'))
+265 .withColumnRenamed("UniqueCarrier","WeatherCarrier")
+266 #dfA1 = dfA.orderBy('UniqueCarrier',ascending=True)
+267 dfA2 = dfAirwaya.join(dfA, dfAirwaya.UniqueCarrier ==
+dfA.WeatherCarrier).drop('UniqueCarrier')
+268 #In order to ignore large counts, percentage is calculated
+269 dfA3 = dfA2.withColumn("Percentage",(f.col("Wcount")/f.col("Cancel_count")*100))
+270 dfA4c = dfA3.join(df_carriers, dfA3.WeatherCarrier == df_carriers.Code).drop('Code')
+271 .withColumnRenamed("Description","Airways")
+272 dfA4c.orderBy("Percentage",ascending=False).show(5)
+273 dfA4c.orderBy("Percentage",ascending=True).show(1)
+274
+275 #Calling airline wise analysis function: year wise
+276 print "\nAirline Wise Analysis\n\n2003-Most affected(5) and the least affected\n"
+277 airlines(df2003b,df2003a)
+278 print "\n2004-Most affected(5) and the least affected\n"
+279 airlines(df2004b,df2004a)
+280 print "\n2005-Most affected(5) and the least affected\n"
+281 airlines(df2005b,df2005a)
+282 print "\n2006-Most affected(5) and the least affected\n"
+283 airlines(df2006b,df2006a)
+284 print "\n2007-Most affected(5) and the least affected\n"
+285 airlines(df2007b,df2007a)
+286 print "\n2008-Most affected(5) and the least affected\n"
+287 airlines(df2008b,df2008a)
+288 #Calling airline wise analysis function: overall
+289 print "\nOverall-Most affected(5) and the least affected\n"
+290 airlines(dfwc,dfowc)
